@@ -1,0 +1,29 @@
+{
+  "name": "devookim-skills",
+  "version": "0.1.0",
+  "description": "DevooKim/my-agents 레포의 에이전트 스킬을 설치·관리하는 vercel-labs/skills 래퍼 CLI",
+  "type": "module",
+  "bin": {
+    "devookim-skills": "./bin/devookim-skills.ts"
+  },
+  "files": [
+    "bin",
+    "README.md"
+  ],
+  "engines": {
+    "bun": ">=1.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DevooKim/my-agents.git",
+    "directory": "cli"
+  },
+  "keywords": [
+    "skills",
+    "agent-skills",
+    "claude-code",
+    "cli"
+  ],
+  "author": "DevooKim",
+  "license": "MIT"
+}
