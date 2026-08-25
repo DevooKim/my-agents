@@ -77,6 +77,7 @@ function usage(): void {
   bunx devookim-skills remove [skill...]  설치한 스킬 삭제 (무인자: 전체)
   bunx devookim-skills update [skill...]  설치한 스킬 업데이트 (무인자: 전체)
   bunx devookim-skills find               레포의 스킬 목록 조회
+  bunx devookim-skills help               이 도움말 출력 (-h, --help)
 
 미인식 플래그(-g, -y, -a 등)는 skills CLI에 그대로 전달됩니다.`);
 }

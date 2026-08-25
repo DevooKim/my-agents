@@ -21,6 +21,9 @@ bunx devookim-skills update [skill...]
 
 # 설치한 스킬 삭제 (무인자: 이 도구로 설치한 전체)
 bunx devookim-skills remove [skill...]
+
+# 도움말
+bunx devookim-skills help
 ```
 
 ## 동작 방식
