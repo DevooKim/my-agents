@@ -5,15 +5,15 @@ description: Manage skills with the devookim-skills CLI. Use when listing, insta
 
 # devookim-skills
 
-Use the exact CLI version declared in `cli/package.json` as the command source of truth.
-Invoke every command as `bunx devookim-skills@<exact-version> ...`; keep the version
-in sync with the checkout or installed skill release. A bare package name and
-`@latest` are not valid for operational commands because Bun/npm resolution or
-cache state can select a different CLI release.
+The current CLI release is `0.2.1`, matching `cli/package.json`. Invoke every
+command as `bunx devookim-skills@0.2.1 ...`. When the CLI version changes, update
+this pinned version and `cli/package.json` in the same release. A bare package
+name and `@latest` are not valid for operational commands because Bun/npm
+resolution or cache state can select a different CLI release.
 
 ## Install skills
 
-1. Run `bunx devookim-skills@<exact-version> find` when the skill name is unknown.
+1. Run `bunx devookim-skills@0.2.1 find` when the skill name is unknown.
 2. Use the same pinned command prefix for `add`, `update`, or `remove`.
 3. Add `-g` only when the user wants a user-level installation.
 4. Use `add --local` to test the current `my-agents` checkout before it is pushed.
