@@ -30,7 +30,7 @@ bunx devookim-skills add <skill> --local -g -y
 
 ## 외부 스킬 vendoring
 
-외부 스킬은 실제 파일을 `skills/`에 보관하고, 원본 저장소·커밋·경로·해시는
+외부 스킬은 실제 파일을 `skills/vendor/`에 보관하고, 원본 저장소·커밋·경로·해시는
 `skills-lock.json`에 기록합니다.
 
 ```sh

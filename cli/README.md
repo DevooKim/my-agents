@@ -45,7 +45,7 @@ export DEVOOKIM_SKILLS_REPO="$HOME/Dev/settings/my-agents"
 ## 외부 스킬
 
 ```sh
-# 파일을 skills/<name>/에 복사하고 skills-lock.json에 provenance 기록
+# 파일을 skills/vendor/<name>/에 복사하고 skills-lock.json에 provenance 기록
 bunx devookim-skills vendor add <source> -s <skill>
 
 # 상태 및 upstream 변경 확인
@@ -68,6 +68,6 @@ bunx devookim-skills vendor remove <skill...> -y
 - `find` → `bunx skills add DevooKim/my-agents -l` 위임 (설치 없이 목록만)
 - `remove` / `update` → skills CLI의 설치 기록(`skills-lock.json` / `~/.agents/.skill-lock.json`)에서
   소스가 `DevooKim/my-agents`인 스킬만 골라 위임합니다.
-- `vendor` → 외부 원본을 `skills/`에 vendoring하고 저장소 루트의 `skills-lock.json`으로
+- `vendor` → 외부 원본을 `skills/vendor/`에 vendoring하고 저장소 루트의 `skills-lock.json`으로
   upstream commit과 최종 파일 해시를 추적합니다.
 - 미인식 플래그(`-g`, `-y`, `-a`, `--copy` 등)는 skills CLI에 그대로 전달됩니다.

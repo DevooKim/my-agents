@@ -23,6 +23,27 @@ interface Checkout {
 }
 
 const PENDING_DIR = ".devookim-skills/pending";
+const VENDOR_DIR = ["skills", "vendor"] as const;
+
+function vendorSkillPath(repoRoot: string, name: string): string {
+  return join(repoRoot, ...VENDOR_DIR, name);
+}
+
+function legacySkillPath(repoRoot: string, name: string): string {
+  return join(repoRoot, "skills", name);
+}
+
+async function pathExists(path: string): Promise<boolean> {
+  return lstat(path).then(() => true).catch(() => false);
+}
+
+async function localSkillPath(repoRoot: string, name: string): Promise<string> {
+  const vendored = vendorSkillPath(repoRoot, name);
+  if (await pathExists(vendored)) return vendored;
+  const legacy = legacySkillPath(repoRoot, name);
+  if (await pathExists(legacy)) return legacy;
+  return vendored;
+}
 
 function stripGitSuffix(value: string): string {
   return value.endsWith(".git") ? value.slice(0, -4) : value;
@@ -210,15 +231,15 @@ export async function vendorAdd(sourceInput: string, options: VendorOptions): Pr
       const path = discovered.get(name);
       if (!path) throw new Error(`외부 소스에서 '${name}' 스킬을 찾지 못했습니다.`);
       await validateSkill(path, name);
-      const target = join(options.repoRoot, "skills", name);
-      if (lock.skills[name] || (await lstat(target).then(() => true).catch(() => false))) {
+      const target = vendorSkillPath(options.repoRoot, name);
+      if (lock.skills[name] || (await pathExists(target)) || (await pathExists(legacySkillPath(options.repoRoot, name)))) {
         throw new Error(`'${name}'이 이미 존재합니다. vendor update를 사용하세요.`);
       }
       selected.push([name, path]);
     }
 
     for (const [name, path] of selected) {
-      const target = join(options.repoRoot, "skills", name);
+      const target = vendorSkillPath(options.repoRoot, name);
       await replaceDirectory(path, target);
       lock.skills[name] = {
         source: source.source,
@@ -229,7 +250,7 @@ export async function vendorAdd(sourceInput: string, options: VendorOptions): Pr
         computedHash: await hashDirectory(target),
       };
       await writeLock(options.repoRoot, lock);
-      console.log(`✓ ${name} → skills/${name}`);
+      console.log(`✓ ${name} → skills/vendor/${name}`);
     }
   } finally {
     await cleanupCheckout(checkout);
@@ -245,7 +266,7 @@ export async function vendorList(repoRoot: string): Promise<void> {
   }
   for (const name of names) {
     const entry = lock.skills[name]!;
-    const path = join(repoRoot, "skills", name);
+    const path = await localSkillPath(repoRoot, name);
     const localHash = await hashDirectory(path).catch(() => "missing");
     const status = localHash === "missing" ? "missing" : localHash === entry.computedHash ? "clean" : "modified";
     console.log(`${name}\t${entry.source}\t${entry.ref?.slice(0, 12) || "-"}\t${status}`);
@@ -273,7 +294,7 @@ export async function vendorCheck(options: VendorOptions): Promise<void> {
     try {
       const latestHash = await hashDirectory(skillPath(latest, entry));
       const baseHash = await hashDirectory(skillPath(base, entry));
-      const localHash = await hashDirectory(join(options.repoRoot, "skills", name)).catch(() => "missing");
+      const localHash = await hashDirectory(await localSkillPath(options.repoRoot, name)).catch(() => "missing");
       const upstream = latestHash === baseHash ? "up-to-date" : `update ${entry.ref?.slice(0, 8)} → ${latest.commit.slice(0, 8)}`;
       const local = localHash === "missing" ? "missing" : localHash === entry.computedHash ? "clean" : "modified";
       console.log(`${name}\tupstream:${upstream}\tlocal:${local}`);
@@ -336,7 +357,7 @@ export async function vendorUpdate(options: VendorOptions): Promise<void> {
     const latest = await latestCheckout(entry, options.ref);
     let mergeRoot: string | undefined;
     try {
-      const ours = join(options.repoRoot, "skills", name);
+      const ours = await localSkillPath(options.repoRoot, name);
       await validateSkill(ours, name);
       const baseTree = skillPath(base, entry);
       const latestTree = skillPath(latest, entry);
@@ -387,7 +408,7 @@ export async function vendorContinue(name: string, repoRoot: string): Promise<vo
   const file = pendingPath(repoRoot, name);
   const pending = JSON.parse(await readFile(file, "utf8")) as PendingMerge;
   if (pending.version !== 1 || pending.skill !== name) throw new Error(`${name}: 잘못된 pending merge 파일입니다.`);
-  const target = join(repoRoot, "skills", name);
+  const target = await localSkillPath(repoRoot, name);
   await validateSkill(target, name);
   const markers = await containsConflictMarkers(target);
   if (markers.length > 0) throw new Error(`충돌 마커가 남아 있습니다: ${markers.join(", ")}`);
@@ -417,7 +438,7 @@ export async function vendorRemove(options: VendorOptions): Promise<void> {
       console.log(`- ${name}: 건너뜀`);
       continue;
     }
-    await rm(join(options.repoRoot, "skills", name), { recursive: true, force: true });
+    await rm(await localSkillPath(options.repoRoot, name), { recursive: true, force: true });
     delete lock.skills[name];
     await rm(pendingPath(options.repoRoot, name), { force: true });
     console.log(`✓ ${name}: 삭제`);
