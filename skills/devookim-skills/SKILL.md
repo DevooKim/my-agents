@@ -5,19 +5,22 @@ description: Manage skills with the devookim-skills CLI. Use when listing, insta
 
 # devookim-skills
 
-The current CLI release is `0.2.1`, matching `cli/package.json`. Invoke every
-command as `bunx devookim-skills@0.2.1 ...`. When the CLI version changes, update
+The current CLI release is `0.3.0`, matching `cli/package.json`. Invoke every
+command as `bunx devookim-skills@0.3.0 ...`. When the CLI version changes, update
 this pinned version and `cli/package.json` in the same release. A bare package
 name and `@latest` are not valid for operational commands because Bun/npm
 resolution or cache state can select a different CLI release.
 
 ## Install skills
 
-1. Run `bunx devookim-skills@0.2.1 find` when the skill name is unknown.
+1. Run `bunx devookim-skills@0.3.0 find` when the skill name is unknown.
 2. Use the same pinned command prefix for `add`, `update`, or `remove`.
-3. Add `-g` only when the user wants a user-level installation.
-4. Use `add --local` to test the current `my-agents` checkout before it is pushed.
-5. Inside the `my-agents` checkout, use `-g`; project-scoped installation there would collide with the vendoring `skills-lock.json`.
+3. Always pass explicit skill names. Without them, these commands open an
+   interactive selection TUI on a TTY, which an agent cannot drive; pass `-y` to
+   force the non-interactive path when no name is available.
+4. Add `-g` only when the user wants a user-level installation.
+5. Use `add --local` to test the current `my-agents` checkout before it is pushed.
+6. Inside the `my-agents` checkout, use `-g`; project-scoped installation there would collide with the vendoring `skills-lock.json`.
 
 ## Vendor external skills
 

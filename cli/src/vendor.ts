@@ -145,7 +145,7 @@ function parseFrontmatterName(content: string): string | undefined {
   return match?.[1]?.match(/^name:\s*["']?([^"'\n]+)["']?\s*$/m)?.[1]?.trim();
 }
 
-async function discoverSkills(root: string): Promise<Map<string, string>> {
+export async function discoverSkills(root: string): Promise<Map<string, string>> {
   const found = new Map<string, string>();
   async function walk(current: string): Promise<void> {
     for (const entry of await readdir(current, { withFileTypes: true })) {
@@ -444,4 +444,32 @@ export async function vendorRemove(options: VendorOptions): Promise<void> {
     console.log(`✓ ${name}: 삭제`);
   }
   await writeLock(options.repoRoot, lock);
+}
+
+export interface SkillSummary {
+  name: string;
+  description?: string | undefined;
+}
+
+function parseFrontmatterDescription(content: string): string | undefined {
+  const match = content.match(/^---\s*\n([\s\S]*?)\n---/);
+  return match?.[1]?.match(/^description:\s*(?:["']([^"']*)["']|(.+))\s*$/m)?.slice(1).find(Boolean)?.trim();
+}
+
+/** 원격 또는 로컬 소스에 있는 스킬 목록을 name/description으로 조회한다. */
+export async function listSourceSkills(sourceInput: string, ref?: string): Promise<SkillSummary[]> {
+  const source = parseSource(sourceInput, ref);
+  const checkout = await checkoutSource(source);
+  try {
+    const discoveryRoot = source.subpath ? resolve(checkout.root, source.subpath) : checkout.root;
+    const discovered = await discoverSkills(discoveryRoot);
+    const summaries: SkillSummary[] = [];
+    for (const [name, path] of discovered) {
+      const content = await readFile(join(path, "SKILL.md"), "utf8").catch(() => "");
+      summaries.push({ name, description: parseFrontmatterDescription(content) });
+    }
+    return summaries.sort((a, b) => a.name.localeCompare(b.name));
+  } finally {
+    await cleanupCheckout(checkout);
+  }
 }

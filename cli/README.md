@@ -10,6 +10,9 @@
 # 레포에 있는 스킬 목록 조회
 bunx devookim-skills find
 
+# 스킬 이름 없이 실행하면 목록 TUI에서 골라 설치
+bunx devookim-skills add
+
 # 스킬 설치 (여러 개 가능)
 bunx devookim-skills add my-skill other-skill
 
@@ -25,6 +28,22 @@ bunx devookim-skills remove [skill...]
 # 도움말
 bunx devookim-skills help
 ```
+
+## 대화형 선택
+
+`add`, `update`, `remove`를 스킬 이름 없이 TTY에서 실행하면 스킬 목록 TUI가 열립니다.
+
+```
+설치할 스킬 선택 (DevooKim/my-agents)
+  ↑/↓ 이동 · space 선택 · a 전체 · enter 확인 · esc 취소
+❯ ◉ hello-devookim  devookim-skills 설치 파이프라인 검증용 샘플 스킬.
+  ◯ writing-for-agents  Writing documents for agents.
+```
+
+- `add`는 소스 레포의 스킬을, `update`/`remove`는 이 도구로 설치한 스킬을 보여줍니다.
+- `--all` 또는 `-y`를 주면 TUI 없이 바로 진행합니다. 파이프·CI 등 TTY가 아닌
+  환경에서는 기존 동작(목록 출력 / 전체 대상)을 유지합니다.
+- `vendor` 명령은 TUI를 사용하지 않습니다.
 
 ## 로컬 체크아웃
 

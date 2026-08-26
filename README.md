@@ -19,6 +19,10 @@ bunx devookim-skills update            # 업데이트
 bunx devookim-skills remove <skill>    # 삭제
 ```
 
+`add`, `update`, `remove`를 스킬 이름 없이 TTY에서 실행하면 스킬 목록 TUI가 열려
+방향키·space로 골라 진행할 수 있습니다. `--all`이나 `-y`를 주면 TUI 없이 바로
+진행합니다.
+
 push 전 현재 체크아웃을 설치할 때는 저장소 루트에서 `--local`을 사용합니다.
 
 ```sh

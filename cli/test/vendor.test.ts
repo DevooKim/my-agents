@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { readLock } from "../src/lock";
 import { run } from "../src/process";
-import { parseSource, vendorAdd, vendorContinue, vendorUpdate } from "../src/vendor";
+import { listSourceSkills, parseSource, vendorAdd, vendorContinue, vendorUpdate } from "../src/vendor";
 
 const temporaryPaths: string[] = [];
 
@@ -101,4 +101,20 @@ test("충돌이 해결되기 전에는 lockfile을 갱신하지 않는다", asyn
   await writeFile(localSkill, original.replace("Upstream base.", "Resolved replacement."));
   await vendorContinue("demo", target);
   expect((await readLock(target)).skills.demo?.ref).not.toBe(previousRef);
+});
+
+test("listSourceSkills는 소스의 스킬을 name/description으로 정렬해 반환한다", async () => {
+  const upstream = await makeUpstream();
+  await mkdir(join(upstream, "skills/alpha"), { recursive: true });
+  await writeFile(
+    join(upstream, "skills/alpha/SKILL.md"),
+    '---\nname: alpha\ndescription: "첫 번째 스킬"\n---\n\n# Alpha\n',
+  );
+  await run(["git", "add", "."], { cwd: upstream, quiet: true });
+  await run(["git", "commit", "--quiet", "-m", "add alpha"], { cwd: upstream, quiet: true });
+
+  expect(await listSourceSkills(upstream)).toEqual([
+    { name: "alpha", description: "첫 번째 스킬" },
+    { name: "demo", description: "demo" },
+  ]);
 });

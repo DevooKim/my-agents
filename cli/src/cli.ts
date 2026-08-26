@@ -1,5 +1,7 @@
 import { extractRepositoryOption, resolveRepositoryRoot } from "./repository";
+import { isInteractive, selectSkills } from "./tui";
 import {
+  listSourceSkills,
   vendorAdd,
   vendorCheck,
   vendorContinue,
@@ -17,6 +19,12 @@ interface Parsed {
   all: boolean;
   global: boolean;
   local: boolean;
+  yes: boolean;
+}
+
+interface ManagedSkill {
+  name: string;
+  source?: string | undefined;
 }
 
 interface VendorParsed {
@@ -33,6 +41,7 @@ function parseArgs(argv: string[]): Parsed {
   let all = false;
   let global = false;
   let local = false;
+  let yes = false;
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i]!;
     if (arg === "--all") all = true;
@@ -40,10 +49,11 @@ function parseArgs(argv: string[]): Parsed {
     else if (arg.startsWith("-")) {
       flags.push(arg);
       if (arg === "-g" || arg === "--global") global = true;
+      if (arg === "-y" || arg === "--yes") yes = true;
       if (VALUE_FLAGS.has(arg) && i + 1 < argv.length) flags.push(argv[++i]!);
     } else skills.push(arg);
   }
-  return { skills, flags, all, global, local };
+  return { skills, flags, all, global, local, yes };
 }
 
 function parseVendorArgs(argv: string[]): VendorParsed {
@@ -71,6 +81,11 @@ function parseVendorArgs(argv: string[]): VendorParsed {
   return { positional, skills, all, ref, yes };
 }
 
+/** skills CLI는 `-s a,b`를 인식하지 못하므로 스킬마다 -s를 반복한다. */
+export function skillFlags(names: string[]): string[] {
+  return names.flatMap((name) => ["-s", name]);
+}
+
 async function runSkillsCli(args: string[]): Promise<number> {
   const proc = Bun.spawn(["bunx", "skills", ...args], {
     stdin: "inherit",
@@ -92,7 +107,7 @@ async function protectVendorLock(global: boolean): Promise<void> {
   }
 }
 
-async function managedSkills(global: boolean, repoRoot?: string): Promise<string[]> {
+async function managedSkills(global: boolean, repoRoot?: string): Promise<ManagedSkill[]> {
   const home = process.env.HOME;
   if (global && !home) return [];
   const lockPath = global ? `${home}/.agents/.skill-lock.json` : `${process.cwd()}/skills-lock.json`;
@@ -102,16 +117,51 @@ async function managedSkills(global: boolean, repoRoot?: string): Promise<string
   const targets = [SOURCE_REPO.toLowerCase(), ...(repoRoot ? [repoRoot.toLowerCase()] : [])];
   return Object.entries(lock.skills ?? {})
     .filter(([, meta]) => targets.some((target) => (meta.source ?? "").toLowerCase().includes(target)))
-    .map(([name]) => name);
+    .map(([name, meta]) => ({ name, source: meta.source }))
+    .sort((a, b) => a.name.localeCompare(b.name));
 }
 
-function resolveTargets(requested: string[], managed: string[]): string[] {
-  if (requested.length === 0) return managed;
-  const managedSet = new Set(managed);
+function resolveTargets(requested: string[], managed: ManagedSkill[]): string[] {
+  const names = managed.map((skill) => skill.name);
+  if (requested.length === 0) return names;
+  const managedSet = new Set(names);
   for (const name of requested.filter((skill) => !managedSet.has(skill))) {
     console.warn(`⚠ '${name}'은 devookim-skills로 설치되지 않아 건너뜁니다.`);
   }
   return requested.filter((skill) => managedSet.has(skill));
+}
+
+/** TUI를 띄울 조건: 스킬 미지정 + TTY + --all/-y 같은 비대화 플래그 없음. */
+function shouldPrompt(parsed: Parsed): boolean {
+  return parsed.skills.length === 0 && !parsed.all && !parsed.yes && isInteractive();
+}
+
+async function promptForAdd(source: string, ref?: string): Promise<string[] | undefined> {
+  process.stderr.write(`${source}의 스킬 목록을 가져오는 중…\n`);
+  const available = await listSourceSkills(source, ref);
+  if (available.length === 0) {
+    console.log("설치할 수 있는 스킬이 없습니다.");
+    return [];
+  }
+  return selectSkills({
+    title: `설치할 스킬 선택 (${source})`,
+    choices: available.map((skill) => ({ name: skill.name, hint: skill.description })),
+  });
+}
+
+/** 로컬 경로 소스는 길고 상대 경로라 마지막 디렉터리 이름만 힌트로 보여준다. */
+export function sourceHint(source?: string): string | undefined {
+  if (!source) return undefined;
+  if (/^[\w.-]+\/[\w.-]+$/.test(source)) return source;
+  return source.split("/").filter(Boolean).pop();
+}
+
+async function promptForManaged(command: string, managed: ManagedSkill[]): Promise<string[] | undefined> {
+  const label = command === "remove" ? "삭제" : "업데이트";
+  return selectSkills({
+    title: `${label}할 스킬 선택`,
+    choices: managed.map((skill) => ({ name: skill.name, hint: sourceHint(skill.source) })),
+  });
 }
 
 function usage(): void {
@@ -119,7 +169,7 @@ function usage(): void {
 
 사용법:
   bunx devookim-skills find
-  bunx devookim-skills add <skill...> [--all] [--local] [-g] [-y]
+  bunx devookim-skills add [skill...] [--all] [--local] [-g] [-y]
   bunx devookim-skills update [skill...] [-g] [-y]
   bunx devookim-skills remove [skill...] [-g] [-y]
   bunx devookim-skills vendor add <source> [-s skill] [--all] [--ref ref]
@@ -128,6 +178,10 @@ function usage(): void {
   bunx devookim-skills vendor update [skill...] [--all] [--ref ref]
   bunx devookim-skills vendor continue <skill>
   bunx devookim-skills vendor remove <skill...> [--all] [-y]
+
+대화형 선택:
+  add / update / remove를 스킬 이름 없이 TTY에서 실행하면 스킬 목록 TUI가 열립니다.
+  --all 또는 -y를 주면 TUI 없이 바로 진행합니다.
 
 저장소 경로 우선순위:
   --repo <path> > DEVOOKIM_SKILLS_REPO > 현재 경로부터 상위 탐색`);
@@ -190,17 +244,47 @@ export async function main(argv = process.argv.slice(2)): Promise<number> {
       else if (extracted.repo) throw new Error("--repo는 add --local 또는 vendor 명령에서만 사용할 수 있습니다.");
       await protectVendorLock(parsed.global);
       if (parsed.all) return runSkillsCli(["add", source, "-s", "*", ...parsed.flags]);
-      if (parsed.skills.length === 0) {
-        usage();
-        console.log("\n설치 가능한 스킬 목록:\n");
-        return runSkillsCli(["add", source, "-l", ...parsed.flags]);
+
+      let targets = parsed.skills;
+      if (shouldPrompt(parsed)) {
+        const picked = await promptForAdd(source);
+        if (picked === undefined) {
+          console.log("취소했습니다.");
+          return 130;
+        }
+        targets = picked;
       }
-      return runSkillsCli(["add", source, "-s", parsed.skills.join(","), ...parsed.flags]);
+      if (targets.length === 0) {
+        if (parsed.skills.length === 0 && !shouldPrompt(parsed)) {
+          usage();
+          console.log("\n설치 가능한 스킬 목록:\n");
+          return runSkillsCli(["add", source, "-l", ...parsed.flags]);
+        }
+        console.log("선택한 스킬이 없습니다.");
+        return 0;
+      }
+      return runSkillsCli(["add", source, ...skillFlags(targets), ...parsed.flags]);
     }
     case "remove":
     case "update": {
       const repoRoot = parsed.local ? await resolveRepositoryRoot(extracted.repo) : undefined;
       const managed = await managedSkills(parsed.global, repoRoot);
+      if (managed.length === 0) {
+        console.log("대상 스킬이 없습니다.");
+        return parsed.skills.length ? 1 : 0;
+      }
+      if (shouldPrompt(parsed)) {
+        const picked = await promptForManaged(command, managed);
+        if (picked === undefined) {
+          console.log("취소했습니다.");
+          return 130;
+        }
+        if (picked.length === 0) {
+          console.log("선택한 스킬이 없습니다.");
+          return 0;
+        }
+        return runSkillsCli([command, ...picked, ...parsed.flags]);
+      }
       const targets = resolveTargets(parsed.skills, managed);
       if (targets.length === 0) {
         console.log("대상 스킬이 없습니다.");

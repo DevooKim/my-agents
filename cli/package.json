@@ -1,6 +1,6 @@
 {
   "name": "devookim-skills",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "DevooKim/my-agents 레포의 에이전트 스킬을 설치·관리하는 vercel-labs/skills 래퍼 CLI",
   "type": "module",
   "bin": {
