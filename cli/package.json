@@ -4,7 +4,7 @@
   "description": "DevooKim/my-agents 레포의 에이전트 스킬을 설치·관리하는 vercel-labs/skills 래퍼 CLI",
   "type": "module",
   "bin": {
-    "devookim-skills": "./bin/devookim-skills.ts"
+    "devookim-skills": "./bin/devookim-skills.js"
   },
   "files": [
     "bin",
@@ -14,7 +14,7 @@
   "scripts": {
     "test": "bun test",
     "typecheck": "tsc --noEmit",
-    "check": "bun run typecheck && bun test && bun build ./bin/devookim-skills.ts --target=bun --outdir=/tmp/devookim-skills-build"
+    "check": "bun run typecheck && bun test && bun build ./bin/devookim-skills.js --target=bun --outdir=/tmp/devookim-skills-build"
   },
   "engines": {
     "bun": ">=1.0.0"

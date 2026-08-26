@@ -1,5 +1,6 @@
 {
   "compilerOptions": {
+    "allowJs": true,
     "allowImportingTsExtensions": true,
     "exactOptionalPropertyTypes": true,
     "module": "Preserve",
@@ -10,5 +11,5 @@
     "target": "ESNext",
     "types": ["bun"]
   },
-  "include": ["bin/**/*.ts", "src/**/*.ts", "test/**/*.ts"]
+  "include": ["bin/**/*.js", "src/**/*.ts", "test/**/*.ts"]
 }
